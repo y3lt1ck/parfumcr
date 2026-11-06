@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Parfum CR</title>
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+</head>
+<body style="background: var(--bg-main); padding: 2rem;">
+
+    <div class="info-page-section" style="max-width: 600px; margin: 0 auto;">
+        <h1 style="text-align: center;">Gestión de Inventario</h1>
+        <p style="text-align: center; color: var(--text-muted);">Sube nuevos perfumes a la base de datos de la tienda.</p>
+
+        <form id="admin-product-form" style="margin-top: 2rem;">
+            <div class="form-group">
+                <label>Nombre del Perfume</label>
+                <input type="text" id="prod-name" required>
+            </div>
+            <div class="form-group">
+                <label>Categoría</label>
+                <select id="prod-category" style="width: 100%; padding: 0.8rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-main);" required>
+                    <option value="Hombre">Hombre</option>
+                    <option value="Mujer">Mujer</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Precio (CRC)</label>
+                <input type="number" id="prod-price" required>
+            </div>
+            <div class="form-group">
+                <label>Descripción</label>
+                <textarea id="prod-desc" required></textarea>
+            </div>
+            <div class="form-group">
+                <label>Imagen del Producto</label>
+                <input type="file" id="prod-image" accept="image/*" required>
+            </div>
+
+            <button type="submit" class="btn-primary" id="btn-upload" style="width: 100%;">Subir Producto</button>
+            <p id="upload-status" style="text-align: center; margin-top: 1rem; font-weight: bold;"></p>
+        </form>
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="index.html" style="color: var(--primary);">Volver a la tienda</a>
+        </div>
+    </div>
+
+    <script src="firebase-config.js"></script>
+    <script>
+        // Reduce la imagen y la convierte a texto (base64) para guardarla en Firestore
+        function resizeImage(file, maxSize = 500, quality = 0.75) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onerror = () => reject(new Error("No se pudo leer la imagen"));
+                reader.onload = () => {
+                    const img = new Image();
+                    img.onerror = () => reject(new Error("Archivo de imagen no válido"));
+                    img.onload = () => {
+                        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+                        const canvas = document.createElement('canvas');
+                        canvas.width = Math.round(img.width * scale);
+                        canvas.height = Math.round(img.height * scale);
+                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+                    img.src = reader.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        document.getElementById('admin-product-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-upload');
+            const status = document.getElementById('upload-status');
+
+            const name = document.getElementById('prod-name').value;
+            const category = document.getElementById('prod-category').value;
+            const price = Number(document.getElementById('prod-price').value);
+            const desc = document.getElementById('prod-desc').value;
+            const file = document.getElementById('prod-image').files[0];
+
+            btn.disabled = true;
+            status.textContent = "Procesando imagen y guardando datos...";
+            status.style.color = "#3498db";
+
+            try {
+                const imageUrl = await resizeImage(file);
+
+                await db.collection('products').add({
+                    name: name,
+                    category: category,
+                    price: price,
+                    description: desc,
+                    imageUrl: imageUrl,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                status.textContent = "¡Producto publicado con éxito en la tienda!";
+                status.style.color = "green";
+                e.target.reset();
+            } catch (error) {
+                status.textContent = "Error al subir: " + error.message;
+                status.style.color = "red";
+            }
+            btn.disabled = false;
+        });
+    </script>
+</body>
+</html>

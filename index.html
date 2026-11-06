@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Parfum CR - Perfumería en Ciudad Quesada, Costa Rica.">
+    <title>Parfum CR - Perfumería</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- SDKs de Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Librerías Externas -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+    <!-- MODAL DE AUTENTICACIÓN (Login / Registro) -->
+    <div id="auth-modal" class="modal" role="dialog" aria-hidden="true">
+        <div class="modal-content auth-content">
+            <button class="close-modal" aria-label="Cerrar" id="close-auth-btn">&times;</button>
+            
+            <div id="login-container">
+                <h2 class="login-title">Iniciar Sesión</h2>
+                <form id="login-form" class="auth-form">
+                        <div class="form-group">
+                        <label for="username">Correo electrónico</label>
+                        <input type="email" id="username" required placeholder="tu@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Contraseña</label>
+                        <input type="password" id="password" required placeholder="Ingresa tu contraseña">
+                    </div>
+                    <button type="submit" class="btn-primary">Entrar</button>
+                    <p id="login-error" class="error-msg"></p>
+                    <button type="button" id="show-register" class="btn-secondary">¿No tienes cuenta? Regístrate</button>
+                </form>
+            </div>
+
+            <div id="register-container" style="display: none;">
+                <h2 class="login-title">Crear Cuenta</h2>
+                <form id="register-form" class="auth-form">
+                    <div class="form-group">
+                        <label for="reg-username">Usuario</label>
+                        <input type="text" id="reg-username" required placeholder="Elige un usuario">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-email">Email</label>
+                        <input type="email" id="reg-email" required placeholder="tu@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-password">Contraseña</label>
+                        <input type="password" id="reg-password" required placeholder="Mínimo 6 caracteres">
+                    </div>
+                    <button type="submit" class="btn-primary">Registrarse</button>
+                    <p id="register-error" class="error-msg"></p>
+                    <button type="button" id="show-login" class="btn-secondary">Ya tengo cuenta</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div id="main-content">
+        <header>
+            <nav>
+                <a class="logo" href="index.html">Parfum CR</a>
+                
+                <div class="search-container">
+                    <input type="text" id="search-input" placeholder="Buscar perfume...">
+                </div>
+
+                <ul class="nav-links">
+                    <li><a href="#catalogo" class="scroll-link">Hombres</a></li>
+                    <li><a href="#catalogo-mujeres" class="scroll-link">Mujeres</a></li>
+                    <li><a href="#nosotros" class="scroll-link">Nosotros</a></li>
+                    <li><a href="#contacto" class="scroll-link">Contacto</a></li>
+                </ul>
+
+                <div class="nav-actions">
+                    <!-- Interruptor de Tema -->
+                    <label class="theme-switch" aria-label="Cambiar tema">
+                        <input type="checkbox" id="theme-toggle-checkbox">
+                        <span class="slider"></span>
+                    </label>
+                    
+                    <button id="auth-btn" class="btn-auth">Ingresar</button>
+                    
+                    <div id="user-menu" style="display: none;">
+                        <span id="user-welcome"></span>
+                        <button id="logout-btn" class="btn-logout">Salir</button>
+                    </div>
+
+                    <button aria-label="Ver carrito" id="cart-btn">
+                        <span role="img" aria-label="Carrito">🛒</span>
+                        <span id="cart-count">0</span>
+                    </button>
+                </div>
+            </nav>
+        </header>
+
+        <main>
+            <section id="inicio" class="hero-section">
+                <h1>Esencias Extraordinarias</h1>
+                <p>Descubre la colección premium de Parfum CR. Elegancia y carácter en cada gota.</p>
+            </section>
+
+            <!-- Catálogo Hombres -->
+            <section id="catalogo">
+                <h2>Perfumes para Hombre</h2>
+                <div class="product-grid" id="product-grid" role="list"></div>
+            </section>
+
+            <!-- Catálogo Mujeres -->
+            <section id="catalogo-mujeres" style="padding: 0 2rem 3rem 2rem; max-width: 1200px; margin: 0 auto;">
+                <h2 style="text-align: center; color: var(--primary); margin-bottom: 2rem; font-size: 2rem;">Perfumes para Mujer</h2>
+                <div class="product-grid" id="product-grid-women" role="list"></div>
+            </section>
+
+            <!-- MODAL PRODUCTO -->
+            <div id="modal-producto" class="modal" role="dialog" aria-hidden="true">
+                <div class="modal-content">
+                    <button class="close-modal" aria-label="Cerrar" id="close-modal-btn">&times;</button>
+                    <div id="modal-producto-detalle"></div>
+                </div>
+            </div>
+
+            <!-- CARRITO -->
+            <aside id="cart-sidebar" class="cart-sidebar" aria-hidden="true">
+                <div class="cart-header">
+                    <h3>Tu Carrito</h3>
+                    <button class="close-cart" aria-label="Cerrar carrito" id="close-cart-btn">&times;</button>
+                </div>
+                <div id="cart-items"></div>
+                <div id="cart-summary">
+                    <p>Total artículos: <span id="cart-total-items">0</span></p>
+                    <p>Total a pagar: <span id="cart-total-price">CRC 0</span></p>
+                </div>
+                <div class="cart-actions">
+                    <button class="btn-empty" id="empty-cart-btn">Vaciar Carrito</button>
+                    <button class="btn-pay" id="pay-cart-btn">Pagar y Facturar</button>
+                </div>
+                <div id="cart-message"></div>
+            </aside>
+
+            <section id="nosotros" class="about-section">
+                <h2>Sobre Parfum CR</h2>
+                <p>En Parfum CR creemos que cada persona merece una esencia propia que refleje su personalidad. Fundada con la visión de traer la más alta calidad en perfumería, destacamos por ofrecer una selección rigurosa de las mejores marcas internacionales.</p>
+                <br>
+                <p>Atendemos exclusivamente en <strong>Ciudad Quesada</strong> con atención personalizada, garantizando la entrega de productos 100% originales.</p>
+            </section>
+
+            <section id="contacto" class="contact-section">
+                <h2>Contacto</h2>
+                <form id="contact-form" autocomplete="off">
+                    <div>
+                        <label for="contact-name">Nombre</label>
+                        <input type="text" id="contact-name" name="name" required>
+                    </div>
+                    <div>
+                        <label for="contact-email">Email</label>
+                        <input type="email" id="contact-email" name="email" required>
+                    </div>
+                    <div>
+                        <label for="contact-message">Mensaje</label>
+                        <textarea id="contact-message" name="message" required></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary">Enviar Mensaje</button>
+                    <div id="contact-form-msg"></div>
+                </form>
+            </section>
+        </main>
+
+        <!-- PIE DE PÁGINA (FOOTER) -->
+        <footer class="main-footer">
+            <div class="footer-container">
+                <!-- Columna 1: Información -->
+                <div class="footer-col">
+                    <h3>Información</h3>
+                    <ul>
+                        <li><a href="#nosotros" class="scroll-link">Quienes Somos</a></li>
+                        <li><a href="garantias.html">Garantías y Devoluciones</a></li>
+                        <li><a href="originales.html">Perfumes 100% Originales</a></li>
+                        <li><a href="pagos.html">Formas de Pago</a></li>
+                        <li><a href="envios.html">Envíos</a></li>
+                    </ul>
+                </div>
+
+                <!-- Columna 2: Tienda y Cobertura -->
+                <div class="footer-col">
+                    <h3>Tienda y Cobertura</h3>
+                    <ul>
+                        <li><span>Tienda 100% Virtual</span></li>
+                        <li><span>Atención exclusiva en Ciudad Quesada</span></li>
+                        <li><span>Entregas locales personalizadas</span></li>
+                        <li><span>Próximamente expansión nacional</span></li>
+                    </ul>
+                </div>
+
+                <!-- Columna 3: Asesoría y Contacto -->
+                <div class="footer-col footer-contact-col">
+                    <h2 class="footer-logo">Parfum CR</h2>
+                    <h4>¿Necesitas Asesoría?</h4>
+                    <p>📞 <a href="tel:+50686091810">+506 8609-1810</a></p>
+                    <p>💬 <a href="https://wa.me/50686091810" target="_blank">+506 8609-1810</a></p>
+                    <p>✉️ <a href="mailto:tomaschaconsalasth@gmail.com">tomaschaconsalasth@gmail.com</a></p>
+                </div>
+            </div>
+
+            <!-- Separador -->
+            <hr class="footer-divider">
+
+            <!-- Sección de Métodos de Pago -->
+            <div class="footer-payments">
+                <p>MÉTODO DE PAGO ACTUAL: SOLO EFECTIVO</p>
+                <div class="payment-badges">
+                    <span class="badge badge-efectivo">💵 Pago en Efectivo</span>
+                </div>
+                <a href="pagos.html" class="footer-pay-link">Ver detalles de pago</a>
+            </div>
+
+            <!-- Derechos Reservados -->
+            <div class="footer-bottom">
+                <p>&copy; 2025 Parfum CR. Todos los derechos reservados.</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Botón WhatsApp -->
+    <a href="https://wa.me/50686091810" class="whatsapp-float" target="_blank" aria-label="Contactar por WhatsApp">
+        <img src="images/whatsapp-icon.png" alt="WhatsApp" style="width: 35px; height: 35px;">
+    </a>
+
+    <script src="firebase-config.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
